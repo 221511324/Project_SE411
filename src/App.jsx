@@ -1,7 +1,13 @@
 import { useState } from 'react';
 import CarManagement from './CarManagement';
+import Dashboard from './Dashboard';
+import Navbar from './Navbar';
+import About from './About';
+import './Girl2.css';
+
 
 export default function App() {
+const [currentPage, setCurrentPage] = useState('dashboard');
   const [cars, setCars] = useState([
     {
       id: 'CAR-001',
@@ -44,13 +50,30 @@ function updateCar(updatedCar) {
     )
   );
 }
+return (
+  <div className="app">
+    <Navbar
+      currentPage={currentPage}
+      setCurrentPage={setCurrentPage}
+    />
 
-  return (
-  <CarManagement
-  cars={cars}
-  onAddCar={addCar}
-  onDeleteCar={deleteCar}
-  onUpdateCar={updateCar}
-  />
-  );
+    <main>
+      {currentPage === 'dashboard' && (
+        <Dashboard cars={cars} />
+      )}
+
+      {currentPage === 'cars' && (
+        <CarManagement
+          cars={cars}
+          onAddCar={addCar}
+          onDeleteCar={deleteCar}
+          onUpdateCar={updateCar}
+        />
+      )}
+
+      {currentPage === 'about' && <About />}
+    </main>
+  </div>
+);
+
 }
