@@ -1,5 +1,5 @@
 
-export default function Navbar({ currentPage, setCurrentPage }) {
+export default function Navbar({ setCurrentPage }) { {
   return (
     <nav className="navbar">
       <h2>Car Management System</h2>
@@ -19,4 +19,5 @@ export default function Navbar({ currentPage, setCurrentPage }) {
       </div>
     </nav>
   );
+}
 }
