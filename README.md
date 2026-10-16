@@ -48,13 +48,13 @@ Modern web browser — such as Google Chrome, Safari, or Microsoft Edge.
 
 **FR-04:** Edit Car — Users can update an existing car's information.
 
-**FR-05: **Delete Car — Users can delete a car.
+**FR-05: ** Delete Car — Users can delete a car.
 
 **FR-06:** Car Validation — The application validates required fields, year, and unique car IDs.
 
 **FR-07:** Car Status — Each car has a status: Available, In Use, or Under Maintenance.
 
-**FR-08: **Dashboard — The dashboard displays total cars, available cars, and cars under maintenance.
+**FR-08: ** Dashboard — The dashboard displays total cars, available cars, and cars under maintenance.
 
 **FR-09:** Automatic Updates — Dashboard counts update when cars are added, edited, or deleted.
 
