@@ -30,7 +30,7 @@ This project is developed for SE411. Part 1 focuses on frontend functionality us
 
 ## Requirements
 
-Software Prerequisites
+**Software Prerequisites**
 
 Node.js — required to run the development tools and Vite.
 
@@ -38,45 +38,45 @@ npm — used to install project dependencies and run scripts.
 
 Modern web browser — such as Google Chrome, Safari, or Microsoft Edge.
 
-Functional Requirements
+**Functional Requirements**
 
-FR-01: Navigation — Users can navigate between Dashboard, Car Management, and About.
+**FR-01:** Navigation — Users can navigate between Dashboard, Car Management, and About.
 
-FR-02: View Cars — Users can view all cars in a table.
+**FR-02:** View Cars — Users can view all cars in a table.
 
-FR-03: Add Car — Users can add a car after entering valid information.
+**FR-03**: Add Car — Users can add a car after entering valid information.
 
-FR-04: Edit Car — Users can update an existing car's information.
+**FR-04:** Edit Car — Users can update an existing car's information.
 
-FR-05: Delete Car — Users can delete a car.
+**FR-05: **Delete Car — Users can delete a car.
 
-FR-06: Car Validation — The application validates required fields, year, and unique car IDs.
+**FR-06:** Car Validation — The application validates required fields, year, and unique car IDs.
 
-FR-07: Car Status — Each car has a status: Available, In Use, or Under Maintenance.
+**FR-07:** Car Status — Each car has a status: Available, In Use, or Under Maintenance.
 
-FR-08: Dashboard — The dashboard displays total cars, available cars, and cars under maintenance.
+**FR-08: **Dashboard — The dashboard displays total cars, available cars, and cars under maintenance.
 
-FR-09: Automatic Updates — Dashboard counts update when cars are added, edited, or deleted.
+**FR-09:** Automatic Updates — Dashboard counts update when cars are added, edited, or deleted.
 
-FR-10: About Page — The page displays all three team members' names and student IDs.
+**FR-10:** About Page — The page displays all three team members' names and student IDs.
 
-Non-Functional Requirements
+**Non-Functional Requirements**
 
-Usability: A simple, clear interface with consistent styling.
+1. Usability: A simple, clear interface with consistent styling.
 
-Responsiveness: The interface works on desktop, tablet, and mobile screens.
+2. Responsiveness: The interface works on desktop, tablet, and mobile screens.
 
-Performance: Pages and interactions respond quickly.
+3. Performance: Pages and interactions respond quickly.
 
-Reliability: Adding, editing, or deleting a car does not break other pages.
+4. Reliability: Adding, editing, or deleting a car does not break other pages.
 
-Data Consistency: All pages use the same shared car collection.
+5. Data Consistency: All pages use the same shared car collection.
 
-Maintainability: Components and functions are organized for easy updates.
+6. Maintainability: Components and functions are organized for easy updates.
 
-Testability: The application includes automated tests for functionality and integration.
+7. Testability: The application includes automated tests for functionality and integration.
 
-Compatibility: The application works in agreed modern browsers.
+8. Compatibility: The application works in agreed modern browsers.
 
 ## Installation and Setup
 
