@@ -31,6 +31,7 @@ function getCarRow(id) {
 test('adds a car to the table and clears the form', async () => {
   const user = userEvent.setup();
   render(<App />);
+await user.click(screen.getByRole('button', { name: 'Car Management' }));
 
   await fillNewCar(user);
   await user.click(screen.getByRole('button', { name: 'Add Car' }));
@@ -48,6 +49,7 @@ test('adds a car to the table and clears the form', async () => {
 test('rejects a duplicate car ID', async () => {
   const user = userEvent.setup();
   render(<App />);
+await user.click(screen.getByRole('button', { name: 'Car Management' }));
 
   await fillNewCar(user, 'car-001');
   await user.click(screen.getByRole('button', { name: 'Add Car' }));
@@ -63,6 +65,7 @@ test('rejects a duplicate car ID', async () => {
 test('edits a car without adding another row', async () => {
   const user = userEvent.setup();
   render(<App />);
+await user.click(screen.getByRole('button', { name: 'Car Management' }));
 
   await user.click(
     within(getCarRow('CAR-001')).getByRole('button', { name: 'Edit' })
@@ -94,6 +97,7 @@ test('edits a car without adding another row', async () => {
 test('cancels editing without changing the car', async () => {
   const user = userEvent.setup();
   render(<App />);
+await user.click(screen.getByRole('button', { name: 'Car Management' }));
 
   await user.click(
     within(getCarRow('CAR-001')).getByRole('button', { name: 'Edit' })
@@ -116,6 +120,7 @@ test('deletes only the selected car after confirmation', async () => {
   const user = userEvent.setup();
   const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
   render(<App />);
+await user.click(screen.getByRole('button', { name: 'Car Management' }));
 
   await user.click(
     within(getCarRow('CAR-001')).getByRole('button', { name: 'Delete' })
@@ -133,6 +138,7 @@ test('keeps the car when deletion is cancelled', async () => {
   const user = userEvent.setup();
   vi.spyOn(window, 'confirm').mockReturnValue(false);
   render(<App />);
+await user.click(screen.getByRole('button', { name: 'Car Management' }));
 
   await user.click(
     within(getCarRow('CAR-001')).getByRole('button', { name: 'Delete' })
