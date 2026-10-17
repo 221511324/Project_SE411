@@ -1,13 +1,12 @@
+import './App.css';
 import { useState } from 'react';
 import CarManagement from './CarManagement';
 import Dashboard from './Dashboard';
-import Navbar from './Navbar';
 import About from './About';
-import './Girl2.css';
-
 
 export default function App() {
-const [currentPage, setCurrentPage] = useState('dashboard');
+  const [activePage, setActivePage] = useState('cars');
+
   const [cars, setCars] = useState([
     {
       id: 'CAR-001',
@@ -29,51 +28,82 @@ const [currentPage, setCurrentPage] = useState('dashboard');
     },
   ]);
 
-  function deleteCar(id) {
-  const confirmed = window.confirm(`Delete car ${id}?`);
+  function addCar(newCar) {
+    setCars((currentCars) => [...currentCars, newCar]);
+  }
 
-  if (confirmed) {
+  function updateCar(updatedCar) {
     setCars((currentCars) =>
-      currentCars.filter((car) => car.id !== id)
+      currentCars.map((car) =>
+        car.id === updatedCar.id ? updatedCar : car
+      )
     );
   }
-}
 
-function addCar(newCar) {
-  setCars((currentCars) => [...currentCars, newCar]);
-}
+  function deleteCar(id) {
+    const confirmed = window.confirm(`Delete car ${id}?`);
 
-function updateCar(updatedCar) {
-  setCars((currentCars) =>
-    currentCars.map((car) =>
-      car.id === updatedCar.id ? updatedCar : car
-    )
+    if (confirmed) {
+      setCars((currentCars) =>
+        currentCars.filter((car) => car.id !== id)
+      );
+    }
+  }
+
+  return (
+    <>
+      <header>
+        <p><strong>Company Car Manager</strong></p>
+
+        <nav
+          aria-label="Main navigation"
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '12px',
+            marginBottom: '24px',
+          }}
+        >
+          <button
+            type="button"
+            aria-current={activePage === 'dashboard' ? 'page' : undefined}
+            onClick={() => setActivePage('dashboard')}
+          >
+            Dashboard
+          </button>
+
+          <button
+            type="button"
+            aria-current={activePage === 'cars' ? 'page' : undefined}
+            onClick={() => setActivePage('cars')}
+          >
+            Car Management
+          </button>
+
+          <button
+            type="button"
+            aria-current={activePage === 'about' ? 'page' : undefined}
+            onClick={() => setActivePage('about')}
+          >
+            About
+          </button>
+        </nav>
+      </header>
+
+      <main>
+        {activePage === 'dashboard' && <Dashboard cars={cars} />}
+
+        {activePage === 'cars' && (
+          <CarManagement
+            cars={cars}
+            onAddCar={addCar}
+            onDeleteCar={deleteCar}
+            onUpdateCar={updateCar}
+          />
+        )}
+
+        {activePage === 'about' && <About />}
+      </main>
+    </>
   );
-}
-return (
-  <div className="app">
-    <Navbar
-      currentPage={currentPage}
-      setCurrentPage={setCurrentPage}
-    />
-
-    <main>
-      {currentPage === 'dashboard' && (
-        <Dashboard cars={cars} />
-      )}
-
-      {currentPage === 'cars' && (
-        <CarManagement
-          cars={cars}
-          onAddCar={addCar}
-          onDeleteCar={deleteCar}
-          onUpdateCar={updateCar}
-        />
-      )}
-
-      {currentPage === 'about' && <About />}
-    </main>
-  </div>
-);
-
 }

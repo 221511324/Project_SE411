@@ -1,34 +1,57 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import App from './App';
+
+beforeEach(() => {
+  // jsdom does not implement scrolling.
+  // This mock lets the Edit button run in the test environment.
+  Object.defineProperty(Element.prototype, 'scrollIntoView', {
+    configurable: true,
+    value: vi.fn(),
+  });
+});
 
 afterEach(() => {
   vi.restoreAllMocks();
 });
 
+function getCarCard(id) {
+  return screen.getByText(id, { exact: true }).closest('article');
+}
+
 async function fillNewCar(user, id = 'CAR-003') {
-  await user.type(screen.getByRole('textbox', { name: 'ID' }), id);
-  await user.type(screen.getByRole('textbox', { name: 'Brand' }), 'Kia');
-  await user.type(screen.getByRole('textbox', { name: 'Model' }), 'K5');
   await user.type(
-    screen.getByRole('textbox', { name: 'Plate Number' }),
+    screen.getByRole('textbox', { name: 'ID', exact: true }),
+    id
+  );
+  await user.type(
+    screen.getByRole('textbox', { name: 'Brand', exact: true }),
+    'Kia'
+  );
+  await user.type(
+    screen.getByRole('textbox', { name: 'Model', exact: true }),
+    'K5'
+  );
+  await user.type(
+    screen.getByRole('textbox', { name: 'Plate Number', exact: true }),
     'DEF 9012'
   );
-  await user.type(screen.getByRole('textbox', { name: 'Color' }), 'Black');
-  await user.type(screen.getByRole('spinbutton', { name: 'Year' }), '2025');
+  await user.type(
+    screen.getByRole('textbox', { name: 'Color', exact: true }),
+    'Black'
+  );
+  await user.type(
+    screen.getByRole('spinbutton', { name: 'Year', exact: true }),
+    '2025'
+  );
   await user.selectOptions(
-    screen.getByRole('combobox', { name: 'Status' }),
+    screen.getByRole('combobox', { name: 'Status', exact: true }),
     'In Use'
   );
 }
 
-function getCarRow(id) {
-  const table = screen.getByRole('table');
-  return within(table).getByText(id).closest('tr');
-}
-
-test('adds a car to the table and clears the form', async () => {
+test('adds a car and clears the form', async () => {
   const user = userEvent.setup();
   render(<App />);
 await user.click(screen.getByRole('button', { name: 'Car Management' }));
@@ -36,17 +59,19 @@ await user.click(screen.getByRole('button', { name: 'Car Management' }));
   await fillNewCar(user);
   await user.click(screen.getByRole('button', { name: 'Add Car' }));
 
-  const row = getCarRow('CAR-003');
+  const card = getCarCard('CAR-003');
 
-  expect(within(row).getByText('Kia')).toBeInTheDocument();
-  expect(within(row).getByText('In Use')).toBeInTheDocument();
   expect(
-    within(screen.getByRole('table')).getAllByRole('row')
-  ).toHaveLength(4);
-  expect(screen.getByRole('textbox', { name: 'ID' })).toHaveValue('');
+    within(card).getByRole('heading', { name: 'Kia K5' })
+  ).toBeInTheDocument();
+  expect(within(card).getByText('In Use')).toBeInTheDocument();
+  expect(screen.getAllByRole('article')).toHaveLength(3);
+  expect(
+    screen.getByRole('textbox', { name: 'ID', exact: true })
+  ).toHaveValue('');
 });
 
-test('rejects a duplicate car ID', async () => {
+test('rejects duplicate IDs regardless of letter case', async () => {
   const user = userEvent.setup();
   render(<App />);
 await user.click(screen.getByRole('button', { name: 'Car Management' }));
@@ -57,60 +82,73 @@ await user.click(screen.getByRole('button', { name: 'Car Management' }));
   expect(screen.getByRole('alert')).toHaveTextContent(
     'This car ID already exists'
   );
-  expect(
-    within(screen.getByRole('table')).getAllByRole('row')
-  ).toHaveLength(3);
+  expect(screen.getAllByRole('article')).toHaveLength(2);
 });
 
-test('edits a car without adding another row', async () => {
+test('edits only the selected car', async () => {
   const user = userEvent.setup();
   render(<App />);
 await user.click(screen.getByRole('button', { name: 'Car Management' }));
 
   await user.click(
-    within(getCarRow('CAR-001')).getByRole('button', { name: 'Edit' })
+    within(getCarCard('CAR-001')).getByRole('button', { name: 'Edit' })
   );
 
-  expect(screen.getByRole('textbox', { name: 'ID' })).toBeDisabled();
+  expect(
+    screen.getByRole('textbox', { name: 'ID', exact: true })
+  ).toBeDisabled();
 
-  const colorInput = screen.getByRole('textbox', { name: 'Color' });
+  const colorInput = screen.getByRole('textbox', {
+    name: 'Color',
+    exact: true,
+  });
+
   await user.clear(colorInput);
   await user.type(colorInput, 'Blue');
   await user.selectOptions(
-    screen.getByRole('combobox', { name: 'Status' }),
+    screen.getByRole('combobox', { name: 'Status', exact: true }),
     'In Use'
   );
-  await user.click(screen.getByRole('button', { name: 'Save Changes' }));
+  await user.click(
+    screen.getByRole('button', { name: 'Save Changes' })
+  );
 
-  const row = getCarRow('CAR-001');
-
-  expect(within(row).getByText('Blue')).toBeInTheDocument();
-  expect(within(row).getByText('In Use')).toBeInTheDocument();
   expect(
-    within(getCarRow('CAR-002')).getByText('Silver')
+    within(getCarCard('CAR-001')).getByText('Blue')
   ).toBeInTheDocument();
   expect(
-    within(screen.getByRole('table')).getAllByRole('row')
-  ).toHaveLength(3);
+    within(getCarCard('CAR-001')).getByText('In Use')
+  ).toBeInTheDocument();
+  expect(
+    within(getCarCard('CAR-002')).getByText('Silver')
+  ).toBeInTheDocument();
+  expect(screen.getAllByRole('article')).toHaveLength(2);
 });
 
-test('cancels editing without changing the car', async () => {
+test('cancels editing without changing saved values', async () => {
   const user = userEvent.setup();
   render(<App />);
 await user.click(screen.getByRole('button', { name: 'Car Management' }));
 
   await user.click(
-    within(getCarRow('CAR-001')).getByRole('button', { name: 'Edit' })
+    within(getCarCard('CAR-001')).getByRole('button', { name: 'Edit' })
   );
 
-  const colorInput = screen.getByRole('textbox', { name: 'Color' });
+  const colorInput = screen.getByRole('textbox', {
+    name: 'Color',
+    exact: true,
+  });
+
   await user.clear(colorInput);
   await user.type(colorInput, 'Blue');
   await user.click(screen.getByRole('button', { name: 'Cancel' }));
 
   expect(
-    within(getCarRow('CAR-001')).getByText('White')
+    within(getCarCard('CAR-001')).getByText('White')
   ).toBeInTheDocument();
+  expect(
+    within(getCarCard('CAR-001')).queryByText('Blue')
+  ).not.toBeInTheDocument();
   expect(
     screen.getByRole('button', { name: 'Add Car' })
   ).toBeInTheDocument();
@@ -123,28 +161,26 @@ test('deletes only the selected car after confirmation', async () => {
 await user.click(screen.getByRole('button', { name: 'Car Management' }));
 
   await user.click(
-    within(getCarRow('CAR-001')).getByRole('button', { name: 'Delete' })
+    within(getCarCard('CAR-001')).getByRole('button', { name: 'Delete' })
   );
 
   expect(confirm).toHaveBeenCalledWith('Delete car CAR-001?');
-
-  const table = screen.getByRole('table');
-
-  expect(within(table).queryByText('CAR-001')).not.toBeInTheDocument();
-  expect(within(table).getByText('CAR-002')).toBeInTheDocument();
+  expect(screen.queryByText('CAR-001')).not.toBeInTheDocument();
+  expect(screen.getByText('CAR-002')).toBeInTheDocument();
+  expect(screen.getAllByRole('article')).toHaveLength(1);
 });
 
-test('keeps the car when deletion is cancelled', async () => {
+test('preserves the car when deletion is cancelled', async () => {
   const user = userEvent.setup();
-  vi.spyOn(window, 'confirm').mockReturnValue(false);
+  const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
   render(<App />);
 await user.click(screen.getByRole('button', { name: 'Car Management' }));
 
   await user.click(
-    within(getCarRow('CAR-001')).getByRole('button', { name: 'Delete' })
+    within(getCarCard('CAR-001')).getByRole('button', { name: 'Delete' })
   );
 
-  expect(
-    within(screen.getByRole('table')).getByText('CAR-001')
-  ).toBeInTheDocument();
+  expect(confirm).toHaveBeenCalledWith('Delete car CAR-001?');
+  expect(screen.getByText('CAR-001')).toBeInTheDocument();
+  expect(screen.getAllByRole('article')).toHaveLength(2);
 });
