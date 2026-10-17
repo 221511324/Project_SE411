@@ -1,7 +1,14 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import App from './App';
+
+beforeEach(() => {
+  Object.defineProperty(Element.prototype, 'scrollIntoView', {
+    configurable: true,
+    value: vi.fn(),
+  });
+});
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -13,8 +20,12 @@ async function navigateTo(user, page) {
   });
 
   await user.click(
-    within(navigation).getByRole('button', { name: page })
+    within(navigation).getByRole('button', { name: page, exact: true })
   );
+}
+
+function getCarCard(id) {
+  return screen.getByText(id, { exact: true }).closest('article');
 }
 
 function expectDashboardCount(title, count) {
@@ -24,7 +35,7 @@ function expectDashboardCount(title, count) {
   expect(within(card).getByText(String(count))).toBeInTheDocument();
 }
 
-test('switches between pages and marks the selected page', async () => {
+test('navigates between pages and highlights the selected page', async () => {
   const user = userEvent.setup();
   render(<App />);
 
@@ -35,30 +46,36 @@ test('switches between pages and marks the selected page', async () => {
   await navigateTo(user, 'Dashboard');
 
   expect(
-    screen.getByRole('heading', { name: 'Dashboard' })
+    screen.getByRole('heading', { name: 'Dashboard', exact: true })
   ).toBeInTheDocument();
   expect(
     screen.queryByRole('heading', { name: 'Car Management' })
   ).not.toBeInTheDocument();
   expect(
-    screen.getByRole('button', { name: 'Dashboard' })
+    screen.getByRole('button', { name: 'Dashboard', exact: true })
   ).toHaveAttribute('aria-current', 'page');
 
   await navigateTo(user, 'About');
 
   expect(
-    screen.getByRole('heading', { name: 'About' })
+    screen.getByRole('heading', { name: 'About the Project' })
   ).toBeInTheDocument();
   expect(
     screen.getByRole('heading', { name: 'Our Team' })
   ).toBeInTheDocument();
+  expect(
+    screen.getByRole('button', { name: 'About', exact: true })
+  ).toHaveAttribute('aria-current', 'page');
 
   await navigateTo(user, 'Car Management');
 
-  expect(screen.getByRole('table')).toBeInTheDocument();
+  expect(
+    screen.getByRole('heading', { name: 'Car Management' })
+  ).toBeInTheDocument();
+  expect(screen.getAllByRole('article')).toHaveLength(2);
 });
 
-test('shows the correct initial dashboard counts', async () => {
+test('shows correct initial dashboard counts', async () => {
   const user = userEvent.setup();
   render(<App />);
 
@@ -69,21 +86,19 @@ test('shows the correct initial dashboard counts', async () => {
   expectDashboardCount('Under Maintenance', 1);
 });
 
-test('updates dashboard counts after changing a car status', async () => {
+test('updates dashboard counts after editing and preserves the change', async () => {
   const user = userEvent.setup();
   render(<App />);
 
-  const row = within(screen.getByRole('table'))
-    .getByText('CAR-001')
-    .closest('tr');
-
   await user.click(
-    within(row).getByRole('button', { name: 'Edit' })
+    within(getCarCard('CAR-001')).getByRole('button', { name: 'Edit' })
   );
+
   await user.selectOptions(
-    screen.getByRole('combobox', { name: 'Status' }),
+    screen.getByRole('combobox', { name: 'Status', exact: true }),
     'Under Maintenance'
   );
+
   await user.click(
     screen.getByRole('button', { name: 'Save Changes' })
   );
@@ -96,12 +111,8 @@ test('updates dashboard counts after changing a car status', async () => {
 
   await navigateTo(user, 'Car Management');
 
-  const updatedRow = within(screen.getByRole('table'))
-    .getByText('CAR-001')
-    .closest('tr');
-
   expect(
-    within(updatedRow).getByText('Under Maintenance')
+    within(getCarCard('CAR-001')).getByText('Under Maintenance')
   ).toBeInTheDocument();
 });
 
@@ -110,12 +121,8 @@ test('updates dashboard counts after deleting a car', async () => {
   vi.spyOn(window, 'confirm').mockReturnValue(true);
   render(<App />);
 
-  const row = within(screen.getByRole('table'))
-    .getByText('CAR-002')
-    .closest('tr');
-
   await user.click(
-    within(row).getByRole('button', { name: 'Delete' })
+    within(getCarCard('CAR-002')).getByRole('button', { name: 'Delete' })
   );
 
   await navigateTo(user, 'Dashboard');
@@ -123,4 +130,52 @@ test('updates dashboard counts after deleting a car', async () => {
   expectDashboardCount('Total Cars', 1);
   expectDashboardCount('Available Cars', 1);
   expectDashboardCount('Under Maintenance', 0);
+
+  await navigateTo(user, 'Car Management');
+
+  expect(screen.queryByText('CAR-002')).not.toBeInTheDocument();
+});
+
+test('updates dashboard counts after adding a car', async () => {
+  const user = userEvent.setup();
+  render(<App />);
+
+  const fields = [
+    ['ID', 'CAR-003'],
+    ['Brand', 'Kia'],
+    ['Model', 'K5'],
+    ['Plate Number', 'DEF 9012'],
+    ['Color', 'Black'],
+  ];
+
+  for (const [name, value] of fields) {
+    await user.type(
+      screen.getByRole('textbox', { name, exact: true }),
+      value
+    );
+  }
+
+  await user.type(
+    screen.getByRole('spinbutton', { name: 'Year', exact: true }),
+    '2025'
+  );
+
+  await user.selectOptions(
+    screen.getByRole('combobox', { name: 'Status', exact: true }),
+    'Available'
+  );
+
+  await user.click(screen.getByRole('button', { name: 'Add Car' }));
+
+  await navigateTo(user, 'Dashboard');
+
+  expectDashboardCount('Total Cars', 3);
+  expectDashboardCount('Available Cars', 2);
+  expectDashboardCount('Under Maintenance', 1);
+
+  await navigateTo(user, 'Car Management');
+
+  expect(
+    within(getCarCard('CAR-003')).getByRole('heading', { name: 'Kia K5' })
+  ).toBeInTheDocument();
 });
