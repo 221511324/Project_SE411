@@ -417,3 +417,74 @@ maintenance history, sorting, pagination, data export, and expanded testing.
 ## Repository
 
 [CarTrack project repository](https://github.com/221511324/Project_SE411)
+  
+## Part 2 — Spring Boot Backend
+
+### Overview
+Part 2 extends CarTrack with a Java Spring Boot backend and REST API for managing company cars.
+
+### Backend Technologies
+- Java 21
+- Spring Boot
+- Maven
+- Spring Data
+- H2 Database
+- JUnit 5
+- Mockito
+
+### Backend Structure
+- `controller/CarController.java` — Handles REST API requests and responses.
+- `service/CarService.java` — Implements business logic and validation.
+- `model/Car.java` — Defines the car data model.
+- `model/CarRepository.java` — Provides database operations.
+- `exception/` — Contains custom exceptions.
+- `CarDatabaseInitializer.java` — Initializes database data.
+
+### REST API Routes
+
+Base URL: `/api/v1/cars`
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/v1/cars` | Retrieve all cars |
+| GET | `/api/v1/cars/{id}` | Find a car by ID |
+| POST | `/api/v1/cars` | Add a new car |
+| PUT | `/api/v1/cars/{id}` | Update an existing car |
+| GET | `/api/v1/cars/page?page=0&size=5` | Retrieve cars with pagination |
+| DELETE | `/api/v1/cars/{id}` | Delete a car |
+
+
+
+### Running the Backend
+
+Requirements:
+- Java JDK 21
+
+Open a terminal in the project root:
+
+```cmd
+cd backend
+mvnw.cmd spring-boot:run
+```
+
+### Running Backend Tests
+
+From the `backend` directory, run:
+
+```cmd
+mvnw.cmd test
+```
+
+### Backend Test Results
+Verified on November 14, 2026:
+- 15 tests passed
+- 0 failures
+- 0 errors
+- 0 skipped
+- BUILD SUCCESS
+
+The backend tests cover service operations, validation, pagination, controller behavior, and Spring application startup.
+
+### Integration Status
+
+The React frontend and Spring Boot backend are separate application components. Final frontend-to-backend integration, CORS configuration, and end-to-end verification must be confirmed before submission.

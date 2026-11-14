@@ -6,6 +6,9 @@ import com.example.demo.model.Car;
 import com.example.demo.model.CarRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+
 
 @Service
 public class CarService {
@@ -20,6 +23,14 @@ public class CarService {
     public Iterable<Car> findAll() {
         return repository.findAll();
     }
+
+
+public Page<Car> findAllPaginated(int page, int size) {
+    if (page < 0 || size < 1) {
+        throw new CarValidationException("Invalid pagination parameters");
+    }
+    return repository.findAll(PageRequest.of(page, size));
+}
 
     public Car findById(Integer id) {
         return repository.findById(id).orElseThrow(() -> new CarNotFoundException(id));

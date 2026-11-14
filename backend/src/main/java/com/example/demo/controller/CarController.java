@@ -5,8 +5,10 @@ import com.example.demo.service.CarService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import org.springframework.data.domain.Page;
+import org.springframework.web.bind.annotation.RequestParam;
 import java.util.Map;
+
 
 @RestController
 @RequestMapping("/api/v1/cars")
@@ -17,6 +19,13 @@ public class CarController {
 
     @GetMapping
     public ResponseEntity<Iterable<Car>> findAll() { return ResponseEntity.ok(service.findAll()); }
+
+    @GetMapping("/page")
+    public ResponseEntity<Page<Car>> findAllPaginated(
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "10") int size) {
+    return ResponseEntity.ok(service.findAllPaginated(page, size));
+}
 
     @GetMapping("/{id}")
     public ResponseEntity<Car> findById(@PathVariable Integer id) { return ResponseEntity.ok(service.findById(id)); }
