@@ -61,4 +61,10 @@ public class CarService {
     }
 
     private boolean blank(String value) { return value == null || value.trim().isEmpty(); }
+
+
+public void delete(Integer id) {
+    findById(id);
+    repository.deleteById(id);
+}
 }

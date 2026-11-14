@@ -1,4 +1,5 @@
- import { useState } from 'react';
+
+import { useState } from 'react';
 
 const emptyForm = {
   id: '',
@@ -22,6 +23,7 @@ export default function CarForm({
     initialCar ? { ...initialCar } : { ...emptyForm }
   );
   const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -37,8 +39,20 @@ export default function CarForm({
   function handleSubmit(event) {
     event.preventDefault();
 
+    saveCar();
+  }
+
+  async function saveCar() {
+    const rawId = isEditing
+      ? initialCar.id
+      : form.id.trim().toUpperCase();
+
+    const normalizedId = /^CAR-/i.test(rawId)
+      ? rawId.toUpperCase()
+      : `CAR-${rawId}`;
+
     const savedCar = {
-      id: isEditing ? initialCar.id : form.id.trim().toUpperCase(),
+      id: normalizedId,
       brand: form.brand.trim(),
       model: form.model.trim(),
       year: Number(form.year),
@@ -48,7 +62,14 @@ export default function CarForm({
     };
 
     if (
-      !savedCar.id ||
+      !isEditing &&
+      !/^CAR-\d+$/.test(savedCar.id)
+    ) {
+      setError('Please enter a valid car ID, for example CAR-003.');
+      return;
+    }
+
+    if (
       !savedCar.brand ||
       !savedCar.model ||
       !savedCar.plateNumber ||
@@ -69,8 +90,7 @@ export default function CarForm({
 
     const duplicateId = cars.some(
       (car) =>
-        car.id.trim().toUpperCase() ===
-          savedCar.id.trim().toUpperCase() &&
+        car.id.trim().toUpperCase() === savedCar.id &&
         (!isEditing || car.id !== initialCar.id)
     );
 
@@ -79,11 +99,23 @@ export default function CarForm({
       return;
     }
 
-    onSaveCar(savedCar);
+    setSaving(true);
     setError('');
 
-    if (!isEditing) {
-      setForm({ ...emptyForm });
+    try {
+      const success = await onSaveCar(savedCar);
+
+      if (success) {
+        setError('');
+
+        if (!isEditing) {
+          setForm({ ...emptyForm });
+        }
+      }
+    } catch {
+      setError('Something went wrong. Please try again.');
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -162,12 +194,20 @@ export default function CarForm({
 
       {error && <p role="alert">{error}</p>}
 
-      <button type="submit">
-        {isEditing ? 'Save Changes' : 'Add Car'}
+      <button type="submit" disabled={saving}>
+        {saving
+          ? 'Saving...'
+          : isEditing
+            ? 'Save Changes'
+            : 'Add Car'}
       </button>
 
       {isEditing && (
-        <button type="button" onClick={onCancel}>
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={saving}
+        >
           Cancel
         </button>
       )}

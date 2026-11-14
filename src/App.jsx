@@ -1,59 +1,167 @@
+
 import './App.css';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import CarManagement from './CarManagement';
 import Dashboard from './Dashboard';
 import About from './About';
 
+const API_URL = '/api/v1/cars';
+
+function formatCar(car) {
+  return {
+    ...car,
+    id: `CAR-${String(car.id).padStart(3, '0')}`,
+  };
+}
+
+function getNumericId(id) {
+  return Number(String(id).replace(/^CAR-/i, ''));
+}
+
+async function fetchCars() {
+  const response = await fetch(API_URL);
+
+  if (!response.ok) {
+    throw new Error('Failed to load cars.');
+  }
+
+  return response.json();
+}
+
 export default function App() {
   const [activePage, setActivePage] = useState('cars');
+  const [cars, setCars] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const [cars, setCars] = useState([
-    {
-      id: 'CAR-001',
-      brand: 'Toyota',
-      model: 'Camry',
-      year: 2024,
-      plateNumber: 'ABC 1234',
-      color: 'White',
-      status: 'Available',
-    },
-    {
-      id: 'CAR-002',
-      brand: 'Hyundai',
-      model: 'Elantra',
-      year: 2023,
-      plateNumber: 'XYZ 5678',
-      color: 'Silver',
-      status: 'Under Maintenance',
-    },
-  ]);
+  useEffect(() => {
+    let ignore = false;
 
-  function addCar(newCar) {
-    setCars((currentCars) => [...currentCars, newCar]);
+    fetchCars()
+      .then((data) => {
+        if (!ignore) {
+          setCars(data.map(formatCar));
+        }
+      })
+      .catch((err) => {
+        if (!ignore) {
+          setError(err.message || 'Unable to connect to the server.');
+        }
+      })
+      .finally(() => {
+        if (!ignore) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  async function loadCars() {
+    setLoading(true);
+    setError('');
+
+    try {
+      const data = await fetchCars();
+      setCars(data.map(formatCar));
+      return true;
+    } catch (err) {
+      setError(err.message || 'Unable to connect to the server.');
+      return false;
+    } finally {
+      setLoading(false);
+    }
   }
 
-  function updateCar(updatedCar) {
-    setCars((currentCars) =>
-      currentCars.map((car) =>
-        car.id === updatedCar.id ? updatedCar : car
-      )
-    );
+  async function addCar(newCar) {
+    setError('');
+
+    try {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...newCar,
+          id: getNumericId(newCar.id),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to add car.');
+      }
+
+      return await loadCars();
+    } catch (err) {
+      setError(err.message || 'Failed to add car.');
+      return false;
+    }
   }
 
-  function deleteCar(id) {
-    const confirmed = window.confirm(`Delete car ${id}?`);
+  async function updateCar(updatedCar) {
+    setError('');
 
-    if (confirmed) {
-      setCars((currentCars) =>
-        currentCars.filter((car) => car.id !== id)
-      );
+    try {
+      const id = getNumericId(updatedCar.id);
+
+      const response = await fetch(`${API_URL}/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...updatedCar,
+          id,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update car.');
+      }
+
+      return await loadCars();
+    } catch (err) {
+      setError(err.message || 'Failed to update car.');
+      return false;
+    }
+  }
+
+  async function deleteCar(car) {
+    setError('');
+
+    try {
+      const id = getNumericId(car.id);
+
+      const response = await fetch(`${API_URL}/${id}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete car.');
+      }
+
+      return await loadCars();
+    } catch (err) {
+      setError(err.message || 'Failed to delete car.');
+      return false;
     }
   }
 
   return (
     <>
       <header>
-        <p><strong>Company Car Manager</strong></p>
+        <p>
+          <strong>Company Car Manager</strong>
+        </p>
 
         <nav
           aria-label="Main navigation"
@@ -91,15 +199,28 @@ export default function App() {
       </header>
 
       <main>
-        {activePage === 'dashboard' && <Dashboard cars={cars} />}
+        {error && (
+          <p role="alert">
+            {error}
+          </p>
+        )}
+
+        {activePage === 'dashboard' && (
+          <Dashboard cars={cars} />
+        )}
 
         {activePage === 'cars' && (
-          <CarManagement
-            cars={cars}
-            onAddCar={addCar}
-            onDeleteCar={deleteCar}
-            onUpdateCar={updateCar}
-          />
+          loading ? (
+            <p>Loading cars...</p>
+          ) : (
+            <CarManagement
+              cars={cars}
+              onAddCar={addCar}
+              onUpdateCar={updateCar}
+              onDeleteCar={deleteCar}
+              onReloadCars={loadCars}
+            />
+          )
         )}
 
         {activePage === 'about' && <About />}

@@ -27,6 +27,11 @@ public class CarController {
     @PutMapping("/{id}")
     public ResponseEntity<Car> update(@PathVariable Integer id, @RequestBody Car car) { return ResponseEntity.ok(service.update(id, car)); }
 
+    @DeleteMapping("/{id}")
+public ResponseEntity<Void> delete(@PathVariable Integer id) {
+    service.delete(id);
+    return ResponseEntity.noContent().build();
+}
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, String>> handle(RuntimeException exception) {
         HttpStatus status = exception.getClass().getSimpleName().equals("CarNotFoundException") ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;

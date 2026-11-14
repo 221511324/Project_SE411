@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import CarForm from './CarForm';
 
@@ -5,6 +6,19 @@ const carPhotos = {
   'toyota camry': '/images/2020-Toyota-Camry-Super-White.png.avif',
   'hyundai elantra': 'public/images/images.jpeg',
 };
+
+const CARS_PER_PAGE = 6;
+
+function formatCar(car) {
+  return {
+    ...car,
+    id: `CAR-${String(car.id).padStart(3, '0')}`,
+  };
+}
+
+function getNumericId(id) {
+  return Number(String(id).replace(/^CAR-/i, ''));
+}
 
 function CarPhoto({ car }) {
   const [failed, setFailed] = useState(false);
@@ -47,8 +61,8 @@ function StatusBadge({ status }) {
 export default function CarManagement({
   cars,
   onAddCar,
-  onDeleteCar,
   onUpdateCar,
+  onDeleteCar,
 }) {
   const [editingCar, setEditingCar] = useState(null);
   const [search, setSearch] = useState('');
@@ -56,9 +70,16 @@ export default function CarManagement({
   const [brandFilter, setBrandFilter] = useState('All');
   const [view, setView] = useState('cards');
 
+  const [searchResult, setSearchResult] = useState(null);
+  const [searchError, setSearchError] = useState('');
+  const [searching, setSearching] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+
   const brands = [...new Set(cars.map((car) => car.brand))].sort();
 
-  const visibleCars = cars.filter((car) => {
+  const sourceCars = searchResult !== null ? searchResult : cars;
+
+  const visibleCars = sourceCars.filter((car) => {
     const searchableText =
       `${car.id} ${car.brand} ${car.model} ${car.plateNumber}`.toLowerCase();
 
@@ -69,19 +90,111 @@ export default function CarManagement({
     );
   });
 
-  function handleSave(car) {
+  const totalPages = Math.max(
+    1,
+    Math.ceil(visibleCars.length / CARS_PER_PAGE)
+  );
+
+  const paginatedCars = visibleCars.slice(
+    (currentPage - 1) * CARS_PER_PAGE,
+    currentPage * CARS_PER_PAGE
+  );
+
+  async function handleSearchSubmit(event) {
+    event.preventDefault();
+
+    const trimmedSearch = search.trim();
+
+    setCurrentPage(1);
+    setSearchError('');
+    setSearchResult(null);
+
+    // Search by ID through the Spring Boot API.
+    if (!/^(CAR-)?\d+$/i.test(trimmedSearch)) {
+      return;
+    }
+
+    const id = getNumericId(trimmedSearch);
+
+    if (!Number.isInteger(id) || id < 1) {
+      setSearchError('Please enter a valid car ID.');
+      setSearchResult([]);
+      return;
+    }
+
+    setSearching(true);
+
+    try {
+      const response = await fetch(`/api/v1/cars/${id}`);
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Car not found.');
+      }
+
+      const data = await response.json();
+      setSearchResult([formatCar(data)]);
+    } catch (error) {
+      setSearchResult([]);
+      setSearchError(error.message || 'Unable to search for this car.');
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  function handleSearchChange(event) {
+    setSearch(event.target.value);
+    setSearchResult(null);
+    setSearchError('');
+    setCurrentPage(1);
+  }
+
+  async function handleSave(car) {
+    let success;
+
     if (editingCar) {
-      onUpdateCar(car);
-      setEditingCar(null);
+      success = await onUpdateCar(car);
     } else {
-      onAddCar(car);
+      success = await onAddCar(car);
+    }
+
+    if (success) {
+      setEditingCar(null);
+      setSearch('');
+      setSearchResult(null);
+      setSearchError('');
+      setCurrentPage(1);
+    }
+
+    return success;
+  }
+
+  // Delete a car after user confirmation.
+  async function handleDelete(car) {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete ${car.brand} ${car.model} (${car.id})?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    const success = await onDeleteCar(car);
+
+    if (success) {
+      setEditingCar(null);
+      setSearchResult(null);
+      setSearchError('');
+      setCurrentPage(1);
     }
   }
 
   function startEditing(car) {
     setEditingCar(car);
+
     document.getElementById('fleet-form')?.scrollIntoView({
       block: 'start',
+      behavior: 'smooth',
     });
   }
 
@@ -89,6 +202,9 @@ export default function CarManagement({
     setSearch('');
     setStatusFilter('All');
     setBrandFilter('All');
+    setSearchResult(null);
+    setSearchError('');
+    setCurrentPage(1);
   }
 
   function renderActions(car) {
@@ -105,8 +221,7 @@ export default function CarManagement({
         <button
           type="button"
           className="fleet-delete"
-          onClick={() => onDeleteCar(car.id)}
-          disabled={editingCar?.id === car.id}
+          onClick={() => handleDelete(car)}
         >
           Delete
         </button>
@@ -125,7 +240,7 @@ export default function CarManagement({
         <div>
           <span className="fleet-eyebrow">YOUR COMPANY FLEET</span>
           <h1>Car Management</h1>
-          <p>View, add, edit, and delete company cars.</p>
+          <p>View, add, and edit company cars.</p>
         </div>
 
         <span className="fleet-total">
@@ -157,19 +272,33 @@ export default function CarManagement({
           </div>
 
           <label htmlFor="fleet-search">Search cars</label>
-          <input
-            id="fleet-search"
-            type="search"
-            placeholder="Brand, model, ID or plate"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
+
+          <form onSubmit={handleSearchSubmit}>
+            <input
+              id="fleet-search"
+              type="search"
+              placeholder="Brand, model, ID or plate"
+              value={search}
+              onChange={handleSearchChange}
+            />
+
+            <button type="submit" disabled={searching}>
+              {searching ? 'Searching...' : 'Search'}
+            </button>
+          </form>
+
+          {searchError && (
+            <p role="alert">{searchError}</p>
+          )}
 
           <label htmlFor="fleet-brand">Filter by brand</label>
           <select
             id="fleet-brand"
             value={brandFilter}
-            onChange={(event) => setBrandFilter(event.target.value)}
+            onChange={(event) => {
+              setBrandFilter(event.target.value);
+              setCurrentPage(1);
+            }}
           >
             <option value="All">All brands</option>
             {brands.map((brand) => (
@@ -183,7 +312,10 @@ export default function CarManagement({
           <select
             id="fleet-status"
             value={statusFilter}
-            onChange={(event) => setStatusFilter(event.target.value)}
+            onChange={(event) => {
+              setStatusFilter(event.target.value);
+              setCurrentPage(1);
+            }}
           >
             <option value="All">All statuses</option>
             <option value="Available">Available</option>
@@ -214,6 +346,7 @@ export default function CarManagement({
               >
                 Cards
               </button>
+
               <button
                 type="button"
                 aria-pressed={view === 'table'}
@@ -225,11 +358,11 @@ export default function CarManagement({
           </div>
 
           {view === 'cards' ? (
-            visibleCars.length === 0 ? (
+            paginatedCars.length === 0 ? (
               <p className="fleet-empty">{emptyMessage}</p>
             ) : (
               <div className="fleet-card-grid">
-                {visibleCars.map((car) => (
+                {paginatedCars.map((car) => (
                   <article className="fleet-car-card" key={car.id}>
                     <div className="fleet-card-heading">
                       <div>
@@ -250,10 +383,12 @@ export default function CarManagement({
                         <dt>Year</dt>
                         <dd>{car.year}</dd>
                       </div>
+
                       <div>
                         <dt>Color</dt>
                         <dd>{car.color}</dd>
                       </div>
+
                       <div>
                         <dt>Plate number</dt>
                         <dd>{car.plateNumber}</dd>
@@ -282,12 +417,12 @@ export default function CarManagement({
                 </thead>
 
                 <tbody>
-                  {visibleCars.length === 0 ? (
+                  {paginatedCars.length === 0 ? (
                     <tr>
                       <td colSpan={8}>{emptyMessage}</td>
                     </tr>
                   ) : (
-                    visibleCars.map((car) => (
+                    paginatedCars.map((car) => (
                       <tr key={car.id}>
                         <td>{car.id}</td>
                         <td>{car.brand}</td>
@@ -304,6 +439,30 @@ export default function CarManagement({
                   )}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {visibleCars.length > CARS_PER_PAGE && (
+            <div className="fleet-pagination">
+              <button
+                type="button"
+                onClick={() => setCurrentPage((page) => page - 1)}
+                disabled={currentPage === 1}
+              >
+                Previous
+              </button>
+
+              <span>
+                Page {currentPage} of {totalPages}
+              </span>
+
+              <button
+                type="button"
+                onClick={() => setCurrentPage((page) => page + 1)}
+                disabled={currentPage === totalPages}
+              >
+                Next
+              </button>
             </div>
           )}
         </div>
